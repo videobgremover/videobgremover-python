@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# SDK specific
+uv.lock
+.python-version
+examples/
+.venv/
+
 # C extensions
 *.so
 
