@@ -12,7 +12,6 @@ from videobgremover.media import (
     MediaContext,
 )
 from videobgremover.core import (
-    ModelSize,
     Anchor,
     SizeMode,
 )
@@ -474,14 +473,8 @@ class TestRemoveBGOptions:
         """Test default options."""
         options = RemoveBGOptions()
         assert options.prefer.value == "auto"
-        assert options.model_size == ModelSize.LARGE
-        assert options.use_tensorrt is True
 
     def test_custom_options(self):
         """Test custom options."""
-        options = RemoveBGOptions(
-            prefer="webm_vp9", model_size=ModelSize.BASE, use_tensorrt=False
-        )
+        options = RemoveBGOptions(prefer="webm_vp9")
         assert options.prefer.value == "webm_vp9"
-        assert options.model_size == ModelSize.BASE
-        assert options.use_tensorrt is False

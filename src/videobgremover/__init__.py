@@ -1,5 +1,6 @@
 """VideoBGRemover Python SDK - Remove video backgrounds with AI and compose videos with FFmpeg."""
 
+from .__version__ import __version__
 from .client import VideoBGRemoverClient
 from .media import (
     Video,
@@ -16,12 +17,10 @@ from .media import (
 from .core import (
     BackgroundType,
     TransparentFormat,
-    ModelSize,
     Anchor,
     SizeMode,
 )
 
-__version__ = "0.1.0"
 
 __all__ = [
     "VideoBGRemoverClient",
@@ -37,7 +36,6 @@ __all__ = [
     "set_default_context",
     "BackgroundType",
     "TransparentFormat",
-    "ModelSize",
     "Anchor",
     "SizeMode",
 ]

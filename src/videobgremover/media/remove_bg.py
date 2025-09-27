@@ -2,7 +2,6 @@
 
 from enum import Enum
 from pydantic import BaseModel
-from ..core.types import ModelSize
 
 
 class Prefer(str, Enum):
@@ -26,5 +25,3 @@ class RemoveBGOptions(BaseModel):
     """Options for background removal processing."""
 
     prefer: Prefer = Prefer.AUTO
-    model_size: ModelSize = ModelSize.LARGE
-    use_tensorrt: bool = True

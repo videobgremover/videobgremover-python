@@ -27,13 +27,6 @@ class TransparentFormat(str, Enum):
     STACKED_VIDEO = "stacked_video"
 
 
-class ModelSize(str, Enum):
-    """AI model size for background removal."""
-
-    TINY = "tiny"
-    SMALL = "small"
-    BASE = "base"
-    LARGE = "large"
 
 
 class Anchor(str, Enum):

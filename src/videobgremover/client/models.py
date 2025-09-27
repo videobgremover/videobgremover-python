@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, HttpUrl, constr, field_validator
 from typing import Optional, Literal, TypeAlias, Annotated
-from ..core.types import BackgroundType, TransparentFormat, ModelSize
+from ..core.types import BackgroundType, TransparentFormat
 
 # Hex color pattern for validation - using Annotated for proper type alias
 HexColor: TypeAlias = Annotated[
@@ -66,8 +66,6 @@ class StartJobRequest(BaseModel):
     """Request model for starting a job."""
 
     format: Literal["mp4"] = "mp4"
-    model_size: ModelSize = ModelSize.LARGE
-    use_tensorrt: bool = True
     background: Optional[BackgroundOptions] = None
 
 

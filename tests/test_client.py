@@ -14,7 +14,7 @@ from videobgremover.client import (
     InsufficientCreditsError,
     JobNotFoundError,
 )
-from videobgremover.core import BackgroundType, TransparentFormat, ModelSize
+from videobgremover.core import BackgroundType, TransparentFormat
 
 
 class TestVideoBGRemoverClient:
@@ -93,7 +93,6 @@ class TestVideoBGRemoverClient:
 
         client = VideoBGRemoverClient("test_key")
         req = StartJobRequest(
-            model_size=ModelSize.LARGE,
             background=BackgroundOptions(
                 type=BackgroundType.TRANSPARENT,
                 transparent_format=TransparentFormat.WEBM_VP9,
@@ -299,6 +298,4 @@ class TestPydanticModels:
         """Test start job request defaults."""
         req = StartJobRequest()
         assert req.format == "mp4"
-        assert req.model_size == ModelSize.LARGE
-        assert req.use_tensorrt is True
         assert req.background is None

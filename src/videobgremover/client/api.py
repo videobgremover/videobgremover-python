@@ -3,6 +3,7 @@
 import time
 import requests
 from typing import Optional, Dict, Any, Callable
+from ..__version__ import __version__
 from .models import (
     CreateJobFileUpload,
     CreateJobUrlDownload,
@@ -42,7 +43,7 @@ class VideoBGRemoverClient:
 
         # Set up authentication header
         self.session.headers.update(
-            {"X-Api-Key": api_key, "User-Agent": "videobgremover-python/0.1.0"}
+            {"X-Api-Key": api_key, "User-Agent": f"videobgremover-python/{__version__}"}
         )
 
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
