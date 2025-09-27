@@ -27,8 +27,6 @@ class TransparentFormat(str, Enum):
     STACKED_VIDEO = "stacked_video"
 
 
-
-
 class Anchor(str, Enum):
     """Anchor positions for video overlay."""
 

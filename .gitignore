@@ -6,7 +6,6 @@ __pycache__/
 # SDK specific
 uv.lock
 .python-version
-examples/
 .venv/
 
 # C extensions
