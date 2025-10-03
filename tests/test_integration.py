@@ -1165,6 +1165,103 @@ class TestRealIntegration:
 
         return output_path
 
+    def test_webhook_integration_end_to_end(self, client, sample_video_url, output_dir):
+        """Test webhook integration end-to-end with REAL API."""
+        credits = client.credits()
+        if credits.remaining_credits < 15:
+            pytest.skip("Not enough credits for webhook integration test")
+
+        print("🔔 Testing webhook integration end-to-end with REAL API...")
+
+        # Use local test webhook endpoint
+        webhook_url = "http://localhost:3000/api/test/webhook"
+        print(f"📍 Webhook URL: {webhook_url}")
+
+        # Step 1: Create and start job with webhook_url
+        print("\n🎬 Step 1: Creating job with webhook URL...")
+
+        # Create job
+        from videobgremover.client import CreateJobUrlDownload
+
+        create_response = client.create_job_url(
+            CreateJobUrlDownload(video_url=sample_video_url)
+        )
+        job_id = create_response["id"]
+        print(f"✅ Job created: {job_id}")
+
+        # Start job with webhook
+        print("🚀 Step 2: Starting job with webhook...")
+        from videobgremover.client import StartJobRequest, BackgroundOptions
+        from videobgremover.core import BackgroundType, TransparentFormat
+
+        client.start_job(
+            job_id,
+            StartJobRequest(
+                webhook_url=webhook_url,
+                background=BackgroundOptions(
+                    type=BackgroundType.TRANSPARENT,
+                    transparent_format=TransparentFormat.WEBM_VP9,
+                ),
+            ),
+        )
+        print(f"✅ Job started with webhook: {webhook_url}")
+
+        # Step 3: Wait for job completion
+        print("\n⏳ Step 3: Waiting for job completion...")
+
+        def status_callback(status):
+            status_messages = {
+                "created": "📋 Job created...",
+                "uploaded": "📤 Video uploaded...",
+                "processing": "🤖 AI processing...",
+                "completed": "✅ Processing completed!",
+                "failed": "❌ Processing failed!",
+            }
+            message = status_messages.get(status, f"📊 Status: {status}")
+            print(f"  {message}")
+
+        final_status = client.wait(job_id, poll_seconds=2.0, on_status=status_callback)
+
+        assert final_status.status == "completed"
+        print("✅ Job completed successfully")
+
+        # Step 4: Check webhook delivery history
+        print("\n📜 Step 4: Checking webhook delivery history...")
+        deliveries = client.webhook_deliveries(job_id)
+
+        print("📊 Webhook Delivery Summary:")
+        print(f"  - Video ID: {deliveries['video_id']}")
+        print(f"  - Total deliveries: {deliveries['total_deliveries']}")
+
+        # Verify deliveries
+        assert deliveries["video_id"] == job_id
+        assert (
+            deliveries["total_deliveries"] >= 2
+        )  # At least job.started and job.completed
+
+        # Check individual deliveries
+        for delivery in deliveries["deliveries"]:
+            print(f"\n  🔔 Webhook: {delivery['event_type']}")
+            print(f"     - Attempt: {delivery['attempt_number']}")
+            print(f"     - Status: {delivery['delivery_status']}")
+            print(f"     - HTTP Code: {delivery['http_status_code']}")
+            print(f"     - Scheduled: {delivery['scheduled_at']}")
+            print(f"     - Delivered: {delivery['delivered_at']}")
+
+            assert delivery["webhook_url"] == webhook_url
+            assert delivery["delivery_status"] == "delivered"
+            assert delivery["http_status_code"] == 200
+
+        # Verify we got both job.started and job.completed
+        event_types = [d["event_type"] for d in deliveries["deliveries"]]
+        assert "job.started" in event_types
+        assert "job.completed" in event_types
+
+        print("\n✅ Webhook integration test completed successfully!")
+        print("   - job.started webhook delivered")
+        print("   - job.completed webhook delivered")
+        print("   - Delivery history retrieved successfully")
+
 
 if __name__ == "__main__":
     # Run integration tests

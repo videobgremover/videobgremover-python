@@ -58,7 +58,7 @@ def main():
     def progress_callback(progress):
         print(f"Progress: {progress:.1f}%")
 
-    foreground = video.remove_background(client, options, on_progress=progress_callback)
+    foreground = video.remove_background(client, options, on_status=progress_callback)
 
     print("Background removal completed!")
 

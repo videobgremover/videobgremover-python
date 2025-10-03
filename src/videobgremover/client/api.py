@@ -9,7 +9,6 @@ from .models import (
     CreateJobUrlDownload,
     StartJobRequest,
     JobStatus,
-    ResultResponse,
     CreditBalance,
     ApiError,
     InsufficientCreditsError,
@@ -210,22 +209,6 @@ class VideoBGRemoverClient:
 
             time.sleep(poll_seconds)
 
-    def result_color(self, job_id: str, hex_color: str) -> ResultResponse:
-        """
-        Get job result with custom background color.
-
-        Args:
-            job_id: The job ID
-            hex_color: Background color in hex format (e.g., "#FF0000")
-
-        Returns:
-            Result with download URL
-        """
-        response = self._request(
-            "POST", f"/v1/jobs/{job_id}/result", json={"background_color": hex_color}
-        )
-        return ResultResponse.model_validate(response)
-
     def credits(self) -> CreditBalance:
         """
         Get current credit balance.
@@ -235,3 +218,16 @@ class VideoBGRemoverClient:
         """
         response = self._request("GET", "/v1/credits")
         return CreditBalance.model_validate(response)
+
+    def webhook_deliveries(self, video_id: str) -> Dict[str, Any]:
+        """
+        Get webhook delivery history for a job.
+
+        Args:
+            video_id: The video/job ID to get delivery history for
+
+        Returns:
+            Webhook delivery history with all attempts
+        """
+        response = self._request("GET", f"/v1/webhooks/deliveries?video_id={video_id}")
+        return response

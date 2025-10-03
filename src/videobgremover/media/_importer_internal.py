@@ -42,6 +42,7 @@ class Importer:
         options: RemoveBGOptions,
         wait_poll_seconds: float,
         on_status: Optional[Callable[[str], None]],
+        webhook_url: Optional[str] = None,
     ) -> Foreground:
         """
         Remove background from video using the API.
@@ -70,6 +71,7 @@ class Importer:
                 type=BackgroundType.TRANSPARENT,
                 transparent_format=TransparentFormat(transparent_format),
             ),
+            webhook_url=webhook_url,
         )
 
         client.start_job(job_id, start_request)

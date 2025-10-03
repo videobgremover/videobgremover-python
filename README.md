@@ -29,24 +29,11 @@ pip install videobgremover
 
 ### Requirements
 
-- Python 3.9+
-- FFmpeg (for video composition)
-- VideoBGRemover API key
+- **Python 3.9+**
+- **FFmpeg** - Required binary for video processing operations
+- **VideoBGRemover API key**
 
-### FFmpeg Installation
-
-The SDK requires FFmpeg for video processing:
-
-```bash
-# macOS
-brew install ffmpeg
-
-# Ubuntu/Debian  
-sudo apt update && sudo apt install ffmpeg
-
-# Windows
-# Download from https://ffmpeg.org/download.html
-```
+**Note:** FFmpeg must be available in your system PATH. The SDK automatically detects and uses your FFmpeg installation for video composition, format conversion, and metadata extraction.
 
 ## Quick Start
 

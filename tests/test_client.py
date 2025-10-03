@@ -299,3 +299,85 @@ class TestPydanticModels:
         req = StartJobRequest()
         assert req.format == "mp4"
         assert req.background is None
+
+    @responses.activate
+    def test_start_job_with_webhook_url(self):
+        """Test starting job with webhook_url."""
+        responses.add(
+            responses.POST,
+            "https://api.videobgremover.com/v1/jobs/job_123/start",
+            json={
+                "id": "job_123",
+                "status": "processing",
+            },
+            status=200,
+        )
+
+        client = VideoBGRemoverClient("test_key")
+        req = StartJobRequest(
+            webhook_url="https://example.com/webhooks",
+            background=BackgroundOptions(
+                type=BackgroundType.TRANSPARENT,
+                transparent_format=TransparentFormat.WEBM_VP9,
+            ),
+        )
+
+        result = client.start_job("job_123", req)
+
+        assert result["id"] == "job_123"
+        assert result["status"] == "processing"
+
+        # Verify webhook_url was sent in request
+        assert len(responses.calls) == 1
+        import json
+
+        request_body = json.loads(responses.calls[0].request.body)
+        assert request_body["webhook_url"] == "https://example.com/webhooks"
+
+    @responses.activate
+    def test_webhook_deliveries(self):
+        """Test getting webhook delivery history."""
+        responses.add(
+            responses.GET,
+            "https://api.videobgremover.com/v1/webhooks/deliveries?video_id=job_123",
+            json={
+                "video_id": "job_123",
+                "total_deliveries": 2,
+                "deliveries": [
+                    {
+                        "event_type": "job.started",
+                        "webhook_url": "https://example.com/webhooks",
+                        "attempt_number": 1,
+                        "delivery_status": "delivered",
+                        "http_status_code": 200,
+                        "error_message": None,
+                        "scheduled_at": "2025-10-02T10:00:00Z",
+                        "delivered_at": "2025-10-02T10:00:01Z",
+                        "payload": {"event": "job.started"},
+                        "created_at": "2025-10-02T10:00:00Z",
+                    },
+                    {
+                        "event_type": "job.completed",
+                        "webhook_url": "https://example.com/webhooks",
+                        "attempt_number": 1,
+                        "delivery_status": "delivered",
+                        "http_status_code": 200,
+                        "error_message": None,
+                        "scheduled_at": "2025-10-02T10:05:00Z",
+                        "delivered_at": "2025-10-02T10:05:01Z",
+                        "payload": {"event": "job.completed"},
+                        "created_at": "2025-10-02T10:05:00Z",
+                    },
+                ],
+            },
+            status=200,
+        )
+
+        client = VideoBGRemoverClient("test_key")
+        deliveries = client.webhook_deliveries("job_123")
+
+        assert deliveries["video_id"] == "job_123"
+        assert deliveries["total_deliveries"] == 2
+        assert len(deliveries["deliveries"]) == 2
+        assert deliveries["deliveries"][0]["event_type"] == "job.started"
+        assert deliveries["deliveries"][1]["event_type"] == "job.completed"

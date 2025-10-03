@@ -67,6 +67,7 @@ class StartJobRequest(BaseModel):
 
     format: Literal["mp4"] = "mp4"
     background: Optional[BackgroundOptions] = None
+    webhook_url: Optional[str] = None
 
 
 class JobStatus(BaseModel):
@@ -97,7 +98,7 @@ class CreditBalance(BaseModel):
 
 
 class ResultResponse(BaseModel):
-    """Result response model."""
+    """Job result response model."""
 
     job_id: str
     status: Literal["success"]

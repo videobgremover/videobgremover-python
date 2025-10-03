@@ -43,21 +43,23 @@ class Video(BaseModel):
 
     def remove_background(
         self,
-        client: VideoBGRemoverClient,
-        options: RemoveBGOptions = RemoveBGOptions(),
-        ctx: Optional[MediaContext] = None,
-        wait_poll_seconds: float = 2.0,
+        client: "VideoBGRemoverClient",
+        options: RemoveBGOptions,
         on_status: Optional[Callable[[str], None]] = None,
+        wait_poll_seconds: float = 2.0,
+        ctx: Optional[MediaContext] = None,
+        webhook_url: Optional[str] = None,
     ) -> Foreground:
         """
         Remove background from video using the API.
 
         Args:
             client: VideoBGRemover API client
-            options: Background removal options
-            ctx: Media context (uses default if None)
+            options: Background removal configuration options
+            on_status: Optional callback for status updates
             wait_poll_seconds: Polling interval for job status
-            on_status: Status callback function (receives status strings)
+            ctx: Optional media context (uses default if not provided)
+            webhook_url: Optional webhook URL for job notifications
 
         Returns:
             Foreground video with transparent background
@@ -69,5 +71,5 @@ class Video(BaseModel):
         importer = Importer(context)
 
         return importer.remove_background(
-            self, client, options, wait_poll_seconds, on_status
+            self, client, options, wait_poll_seconds, on_status, webhook_url
         )
