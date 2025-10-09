@@ -54,13 +54,20 @@ class BaseBackground(BaseModel, ABC):
             New background instance with updated audio settings
         """
         # Create new instance with same properties but different audio settings
-        return self.__class__(
+        new_instance = self.__class__(
             **{
                 **self.model_dump(),
                 "audio_enabled": enabled,
                 "audio_volume": max(0.0, min(1.0, volume)),  # Clamp volume to 0.0-1.0
             }
         )
+
+        # Copy the probed video info if it exists (same pattern as subclip())
+        # This is needed for has_audio() to work correctly on the new instance
+        if hasattr(self, "_video_info"):
+            setattr(new_instance, "_video_info", getattr(self, "_video_info"))
+
+        return new_instance
 
     def has_audio(self) -> bool:
         """Check if this background type can have audio."""

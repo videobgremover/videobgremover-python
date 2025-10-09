@@ -2171,6 +2171,126 @@ class TestVideoBGRemoverWorkflow:
             print(f"      - Foreground only: No background audio → {output_path3}")
             print("    🎧 Listen to compare the different audio combinations!")
 
+    def test_background_audio_with_volume_control(self, mock_client, output_dir):
+        """Test background audio with volume control using .audio() method - MOCK API + REAL FFMPEG.
+
+        This test specifically checks that calling .audio(enabled=True, volume=X) on a
+        video background preserves the video metadata needed for audio mixing.
+
+        Creates two comparison videos:
+        1. WITH background audio (both background + foreground mixed)
+        2. WITHOUT background audio (foreground only)
+
+        REGRESSION TEST: This exposes a bug where .audio() doesn't copy _video_info,
+        causing has_audio() to return False even when audio is enabled.
+        """
+        print("🎵 Testing background audio with volume control...")
+
+        with patch(
+            "videobgremover.media._importer_internal.Importer.remove_background"
+        ) as mock_remove:
+            from videobgremover.media.foregrounds import Foreground
+
+            # Mock foreground with audio
+            mock_remove.return_value = Foreground.from_webm_vp9(
+                "test_assets/transparent_webm_vp9.webm"
+            )
+
+            video = Video.open("test_assets/default_green_screen.mp4")
+            fg = video.remove_background(
+                mock_client, RemoveBGOptions(prefer="webm_vp9")
+            )
+
+            encoder = EncoderProfile.h264(preset="fast")
+
+            # Test 1: WITH background audio (both mixed)
+            print("  Test 1: WITH background audio (both mixed)...")
+            bg_with_audio = Background.from_video("test_assets/audio_background.mp4")
+
+            # Call .audio() with enabled=True to set volume
+            # This should preserve _video_info for has_audio() to work
+            bg_with_audio = bg_with_audio.audio(enabled=True, volume=1.0)
+
+            # Verify audio settings are applied
+            assert bg_with_audio.audio_enabled, "Audio should be enabled"
+            assert bg_with_audio.audio_volume == 1.0, "Volume should be 1.0"
+
+            # Debug: Check if has_audio() works
+            print(f"    bg_with_audio.has_audio() = {bg_with_audio.has_audio()}")
+
+            comp1 = Composition(bg_with_audio)
+            comp1.add(fg, name="fg_with_audio").at(Anchor.CENTER).size(
+                SizeMode.CANVAS_PERCENT, percent=50
+            ).audio(enabled=True, volume=1.0)
+
+            # Check FFmpeg command
+            cmd1 = comp1.dry_run()
+            print("    Checking for audio mixing in FFmpeg command...")
+
+            # Should mix background and foreground audio
+            has_audio_mixing = "amix" in cmd1
+            print(f"    Has audio mixing (amix): {has_audio_mixing}")
+
+            # This assertion will fail if the bug exists
+            assert has_audio_mixing, (
+                "Should mix background and foreground audio. "
+                "BUG: .audio() method doesn't preserve _video_info, "
+                "causing has_audio() to return False even when audio is enabled."
+            )
+
+            # Export test 1
+            output_path1 = output_dir / "audio_with_background.mp4"
+            comp1.to_file(str(output_path1), encoder)
+            assert output_path1.exists()
+            print(f"    ✅ WITH background audio → {output_path1}")
+
+            # Test 2: WITHOUT background audio (foreground only)
+            print("  Test 2: WITHOUT background audio (foreground only)...")
+            bg_no_audio = Background.from_video("test_assets/audio_background.mp4")
+
+            # Explicitly disable background audio
+            bg_no_audio = bg_no_audio.audio(enabled=False)
+
+            assert not bg_no_audio.audio_enabled, "Audio should be disabled"
+            print(f"    bg_no_audio.audio_enabled = {bg_no_audio.audio_enabled}")
+
+            comp2 = Composition(bg_no_audio)
+            comp2.add(fg, name="fg_only_audio").at(Anchor.CENTER).size(
+                SizeMode.CANVAS_PERCENT, percent=50
+            ).audio(enabled=True, volume=1.0)
+
+            # Check FFmpeg command
+            cmd2 = comp2.dry_run()
+
+            # Should NOT mix (only foreground audio)
+            has_audio_mixing2 = "amix" in cmd2
+            print(f"    Has audio mixing (amix): {has_audio_mixing2}")
+            assert not has_audio_mixing2, (
+                "Should NOT mix audio when background audio is disabled"
+            )
+
+            # Should use foreground audio only
+            assert "1:a?" in cmd2 or "-map [audio_out]" in cmd2, (
+                "Should use foreground audio"
+            )
+
+            # Export test 2
+            output_path2 = output_dir / "audio_without_background.mp4"
+            comp2.to_file(str(output_path2), encoder)
+            assert output_path2.exists()
+            print(f"    ✅ WITHOUT background audio → {output_path2}")
+
+            print("  📊 Summary:")
+            print(f"    Test 1 (WITH background): {output_path1}")
+            print("      - Background audio: ENABLED")
+            print("      - Foreground audio: ENABLED")
+            print("      - FFmpeg: Uses amix to mix both")
+            print(f"    Test 2 (WITHOUT background): {output_path2}")
+            print("      - Background audio: DISABLED")
+            print("      - Foreground audio: ENABLED")
+            print("      - FFmpeg: Uses foreground audio only")
+            print("  🎧 Listen to both files to compare the difference!")
+
     def test_alpha_control_all_formats(self, mock_client, output_dir):
         """Test alpha control (.alpha(enabled=False)) with all formats - MOCK API + REAL FFMPEG."""
         print("🎭 Testing alpha control with all formats...")

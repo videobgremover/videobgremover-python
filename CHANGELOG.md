@@ -2,6 +2,11 @@
 
 All notable changes to the VideoBGRemover Python SDK will be documented in this file.
 
+## [0.1.5] - 2025-10-09
+
+### Fixed
+- Background audio not mixing with foreground audio in compositions due to missing video metadata preservation in `.audio()` method
+
 ## [0.1.4] - 2025-10-03
 
 ### Added
