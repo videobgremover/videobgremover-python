@@ -2,6 +2,10 @@
 
 import subprocess
 import json
+import requests
+import os
+from mimetypes import guess_extension
+from urllib.parse import urlparse
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, Union, List, Tuple
 from abc import ABC, abstractmethod
@@ -224,6 +228,66 @@ class EmptyBackground(BaseBackground):
         ]
 
 
+def _download_image_to_temp(image_url: str, ctx: MediaContext) -> str:
+    """
+    Download an image from a URL to a temporary local file.
+    Determines file extension from Content-Type header or URL path.
+
+    Args:
+        image_url: URL to download image from
+        ctx: Media context for temp file creation and logging
+
+    Returns:
+        Path to downloaded temporary file
+    """
+    ctx.logger.debug(f"Downloading image from URL: {image_url}")
+
+    try:
+        response = requests.get(image_url, stream=True, timeout=30)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"Failed to download image from {image_url}: {e}")
+
+    # 1. Determine file extension from Content-Type header (most reliable)
+    extension = ".tmp"  # Default temporary extension
+    content_type = response.headers.get("Content-Type")
+    if content_type:
+        # Remove any charset or other parameters
+        content_type = content_type.split(";")[0].strip()
+        guessed_ext = guess_extension(content_type)
+        if guessed_ext:
+            extension = guessed_ext
+            ctx.logger.debug(f"Guessed extension from Content-Type: {extension}")
+
+    # 2. Fallback: Determine from URL path, ignoring query parameters
+    if extension == ".tmp" or extension == ".bin":  # If generic or not found yet
+        parsed_url = urlparse(image_url)
+        path_without_query = parsed_url.path
+        _, path_ext = os.path.splitext(path_without_query)
+        if path_ext:
+            extension = path_ext
+            ctx.logger.debug(f"Extracted extension from URL path: {extension}")
+
+    # 3. Final fallback: If still no good extension, default to .png
+    if not extension or extension == ".tmp" or extension == ".bin":
+        extension = ".png"
+        ctx.logger.debug(f"Defaulting to extension: {extension}")
+
+    # Create a temporary file with the determined extension
+    temp_file_path = ctx.temp_path(suffix=extension, prefix="downloaded_image_")
+
+    # Write the downloaded content to the temp file
+    try:
+        with open(temp_file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+    except IOError as e:
+        raise RuntimeError(f"Failed to write downloaded image to {temp_file_path}: {e}")
+
+    ctx.logger.info(f"Downloaded {image_url} to {temp_file_path}")
+    return temp_file_path
+
+
 def _probe_image_dimensions(image_path: str, ctx: MediaContext) -> Tuple[int, int]:
     """Probe image dimensions using ffprobe."""
     try:
@@ -382,6 +446,17 @@ class Background:
         """
         ctx = ctx or default_context()
         source = str(path_or_url)
+
+        # Check if source is a URL (starts with http:// or https://)
+        is_url = source.startswith("http://") or source.startswith("https://")
+
+        if is_url:
+            # Download to temporary local file first (fixes slow FFmpeg -loop with URLs)
+            ctx.logger.info(
+                "Image background is a URL, downloading to local temp file..."
+            )
+            source = _download_image_to_temp(source, ctx)
+            ctx.logger.info(f"Using local image file: {source}")
 
         # Auto-detect dimensions from image
         width, height = _probe_image_dimensions(source, ctx)
