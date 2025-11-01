@@ -2,6 +2,11 @@
 
 All notable changes to the VideoBGRemover Python SDK will be documented in this file.
 
+## [0.1.7] - 2025-11-01
+
+### Added
+- Model selection support: choose between videobgremover-original and videobgremover-light via RemoveBGOptions
+
 ## [0.1.6] - 2025-10-17
 
 ### Fixed

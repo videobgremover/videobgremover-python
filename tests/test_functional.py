@@ -36,6 +36,7 @@ from videobgremover import (
     RemoveBGOptions,
     Anchor,
     SizeMode,
+    Model,
 )
 
 
@@ -126,6 +127,42 @@ class TestVideoBGRemoverWorkflow:
     def mock_client(self):
         """Create a mock API client that doesn't make real HTTP calls."""
         return VideoBGRemoverClient("mock_api_key_for_workflow_tests")
+
+    def test_model_enum_and_remove_bg_options(self):
+        """Test Model enum and RemoveBGOptions with model parameter."""
+        print("✅ Testing Model enum and model parameter...")
+
+        # Test Model enum values
+        assert Model.VIDEOBGREMOVER_ORIGINAL == "videobgremover-original"
+        assert Model.VIDEOBGREMOVER_LIGHT == "videobgremover-light"
+
+        # Test RemoveBGOptions with model parameter (using enum)
+        options_with_model = RemoveBGOptions(
+            prefer="auto", model=Model.VIDEOBGREMOVER_LIGHT
+        )
+        assert options_with_model.prefer == "auto"
+        assert options_with_model.model == Model.VIDEOBGREMOVER_LIGHT
+
+        # Test combining prefer and model
+        combined_options = RemoveBGOptions(
+            prefer="webm_vp9", model=Model.VIDEOBGREMOVER_ORIGINAL
+        )
+        assert combined_options.prefer == "webm_vp9"
+        assert combined_options.model == Model.VIDEOBGREMOVER_ORIGINAL
+
+        # Test default (no model specified)
+        default_options = RemoveBGOptions(prefer="auto")
+        assert default_options.prefer == "auto"
+        assert default_options.model is None
+
+        # Test with plain string (future model that doesn't exist in enum yet)
+        future_model_options = RemoveBGOptions(
+            prefer="auto", model="videobgremover-ultra"
+        )
+        assert future_model_options.model == "videobgremover-ultra"
+        print("✅ Plain string models work (future-proof for new models)")
+
+        print("✅ Model enum and model parameter verified")
 
     def test_webm_vp9_workflow_with_image_background(self, mock_client, output_dir):
         """Test WebM VP9 format workflow with image background - MOCK API + REAL FFMPEG."""

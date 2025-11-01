@@ -21,7 +21,15 @@ class Prefer(str, Enum):
     STACKED = "stacked_video"  # Deprecated: use STACKED_VIDEO
 
 
+class Model(str, Enum):
+    """AI model for background removal."""
+
+    VIDEOBGREMOVER_ORIGINAL = "videobgremover-original"
+    VIDEOBGREMOVER_LIGHT = "videobgremover-light"
+
+
 class RemoveBGOptions(BaseModel):
     """Options for background removal processing."""
 
     prefer: Prefer = Prefer.AUTO
+    model: str | None = None

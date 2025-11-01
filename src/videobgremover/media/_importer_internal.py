@@ -71,6 +71,7 @@ class Importer:
                 type=BackgroundType.TRANSPARENT,
                 transparent_format=TransparentFormat(transparent_format),
             ),
+            model=options.model,
             webhook_url=webhook_url,
         )
 

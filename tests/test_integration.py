@@ -30,6 +30,7 @@ from videobgremover import (
     EncoderProfile,
     RemoveBGOptions,
     Prefer,
+    Model,
     Anchor,
     SizeMode,
 )
@@ -1261,6 +1262,108 @@ class TestRealIntegration:
         print("   - job.started webhook delivered")
         print("   - job.completed webhook delivered")
         print("   - Delivery history retrieved successfully")
+
+    def test_model_choices(
+        self, client, sample_video_url, test_backgrounds, output_dir
+    ):
+        """Test processing with different model choices."""
+        # Check credits
+        credits = client.credits()
+        if credits.remaining_credits < 30:
+            pytest.skip("Not enough credits for model choice test (need ~30 credits)")
+
+        print("🤖 Testing different model choices with REAL API...")
+
+        # Test both models with the same video
+        models_to_test = [
+            {"model": Model.VIDEOBGREMOVER_ORIGINAL, "name": "videobgremover-original"},
+            {"model": Model.VIDEOBGREMOVER_LIGHT, "name": "videobgremover-light"},
+        ]
+
+        results = []
+
+        for model_config in models_to_test:
+            model = model_config["model"]
+            name = model_config["name"]
+
+            print(f"\n🎬 Processing with {name} model...")
+
+            import time
+
+            start_time = time.time()
+
+            # Load video
+            video = Video.open(sample_video_url)
+
+            # Configure with model choice
+            options = RemoveBGOptions(prefer=Prefer.WEBM_VP9, model=model)
+
+            # Status callback for progress
+            def status_callback(status):
+                status_messages = {
+                    "created": "📋 Job created...",
+                    "uploaded": "📤 Video uploaded...",
+                    "processing": "🤖 AI processing...",
+                    "completed": "✅ Processing completed!",
+                    "failed": "❌ Processing failed!",
+                }
+                message = status_messages.get(status, f"📊 Status: {status}")
+                print(f"  {message}")
+
+            # Process video (REAL API CALL - consumes credits!)
+            foreground = video.remove_background(
+                client, options, wait_poll_seconds=2.0, on_status=status_callback
+            )
+
+            processing_time = time.time() - start_time
+
+            # Verify processing result
+            assert foreground is not None
+            print(f"✅ {name} processing completed in {processing_time:.2f}s")
+
+            # Create composition with background
+            if not test_backgrounds["image"]:
+                pytest.skip("Test background image not found")
+
+            bg = Background.from_image(test_backgrounds["image"], 30.0)
+            comp = Composition(bg)
+            comp.add(foreground, f"model_{name}").at(Anchor.CENTER).size(
+                SizeMode.CONTAIN
+            )
+
+            # Export composition
+            output_path = output_dir / f"model_{name.replace('-', '_')}.mp4"
+            encoder = EncoderProfile.h264(crf=20, preset="medium")
+
+            print(f"🔧 Exporting to: {output_path}")
+            comp.to_file(str(output_path), encoder)
+
+            # Verify output
+            assert output_path.exists()
+            file_size = output_path.stat().st_size
+            assert file_size > 0
+
+            results.append(
+                {
+                    "model": name,
+                    "output_path": str(output_path),
+                    "foreground": foreground,
+                    "processing_time": processing_time,
+                }
+            )
+
+            print(f"✅ {name} exported: {output_path} ({file_size} bytes)")
+
+        # Verify both models worked
+        assert len(results) == 2
+
+        print("\n📊 Model Choice Results:")
+        for result in results:
+            print(
+                f"  - {result['model']}: {result['processing_time']:.2f}s → {result['output_path']}"
+            )
+
+        print("\n🎉 Model choice test completed successfully!")
 
 
 if __name__ == "__main__":

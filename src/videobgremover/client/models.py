@@ -66,6 +66,7 @@ class StartJobRequest(BaseModel):
     """Request model for starting a job."""
 
     format: Literal["mp4"] = "mp4"
+    model: Optional[str] = None
     background: Optional[BackgroundOptions] = None
     webhook_url: Optional[str] = None
 
