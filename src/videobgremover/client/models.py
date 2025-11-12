@@ -98,16 +98,6 @@ class CreditBalance(BaseModel):
     used_credits: float
 
 
-class ResultResponse(BaseModel):
-    """Job result response model."""
-
-    job_id: str
-    status: Literal["success"]
-    download_url: HttpUrl
-    expires_at: str
-    filename: str
-
-
 class ApiError(Exception):
     """Custom exception for API errors."""
 

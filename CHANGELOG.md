@@ -2,6 +2,11 @@
 
 All notable changes to the VideoBGRemover Python SDK will be documented in this file.
 
+## [0.1.8] - 2025-11-12
+
+### Removed
+- Removed `ResultResponse` class - deprecated endpoint no longer exists in API
+
 ## [0.1.7] - 2025-11-01
 
 ### Added
