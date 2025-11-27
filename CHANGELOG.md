@@ -2,6 +2,11 @@
 
 All notable changes to the VideoBGRemover Python SDK will be documented in this file.
 
+## [0.1.9] - 2025-11-27
+
+### Added
+- **Matte composition support**: Added `matte` parameter to `from_video_and_mask()` for soft alpha blending vs binary masking
+
 ## [0.1.8] - 2025-11-12
 
 ### Removed

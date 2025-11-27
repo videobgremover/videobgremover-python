@@ -104,6 +104,87 @@ class TestForeground:
         assert fg.primary_path == "/path/to/video.mp4"
         assert fg.mask_path == "/path/to/mask.mp4"
 
+    def test_from_video_and_mask_with_matte_true(self):
+        """Test creating foreground with matte=True."""
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,
+        )
+        assert fg.format == "pro_bundle"
+        assert fg.primary_path == "test_assets/matte/video_preprocessed.mp4"
+        assert fg.mask_path == "test_assets/matte/video_matte.mp4"
+        assert fg.matte is True
+
+    def test_from_video_and_mask_with_matte_false(self):
+        """Test creating foreground with matte=False (default)."""
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+        )
+        assert fg.format == "pro_bundle"
+        assert fg.matte is False  # Default
+
+    def test_subclip_preserves_matte_flag(self):
+        """Test that subclip preserves the matte flag."""
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,
+        )
+        subclip = fg.subclip(1.0, 3.0)
+        assert subclip.matte is True  # Should preserve
+        assert subclip.source_trim == (1.0, 3.0)
+
+    def test_subclip_preserves_matte_false(self):
+        """Test that subclip preserves matte=False."""
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=False,
+        )
+        subclip = fg.subclip(2.0, 5.0)
+        assert subclip.matte is False
+
+    def test_ffmpeg_filter_matte_true(self):
+        """Test FFmpeg filter generation with matte=True."""
+        bg = Background.from_color("#FF0000", 1920, 1080, 30.0)
+        comp = Composition(bg)
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,
+        )
+        comp.add(fg)
+
+        cmd = comp.dry_run()
+
+        # Matte mode should NOT include threshold (geq filter)
+        assert "geq=" not in cmd
+        # Should still contain alphamerge for combining RGB and mask
+        assert "alphamerge" in cmd
+        # Should convert mask to grayscale
+        assert "format=gray" in cmd
+
+    def test_ffmpeg_filter_matte_false(self):
+        """Test FFmpeg filter generation with matte=False."""
+        bg = Background.from_color("#0000FF", 1920, 1080, 30.0)
+        comp = Composition(bg)
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=False,
+        )
+        comp.add(fg)
+
+        cmd = comp.dry_run()
+
+        # Binary mode should include threshold filter (geq) for hard edges
+        assert "geq=" in cmd
+        assert "if(gte(lum(X,Y),128),255,0)" in cmd
+        # Should still contain alphamerge
+        assert "alphamerge" in cmd
+
 
 class TestEncoderProfile:
     """Test EncoderProfile class."""

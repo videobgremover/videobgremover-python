@@ -19,6 +19,7 @@ class Foreground(VideoSource):
     source_trim: Optional[Tuple[float, Optional[float]]] = (
         None  # (start, end) for trimming
     )
+    matte: bool = False  # When True, use soft alpha (grayscale values directly); when False, convert to binary mask
 
     model_config = {"frozen": True}
 
@@ -84,6 +85,7 @@ class Foreground(VideoSource):
         mask_path: str,
         audio_path: Optional[str] = None,
         ctx: Optional[MediaContext] = None,
+        matte: bool = False,
     ) -> "Foreground":
         """
         Create foreground from separate RGB video and mask files.
@@ -93,6 +95,10 @@ class Foreground(VideoSource):
             mask_path: Path to mask video file (grayscale)
             audio_path: Path to separate audio file (optional)
             ctx: Media context for operations
+            matte: When True, use grayscale values directly for soft alpha blending.
+                   When False (default), convert to binary mask (threshold at 128).
+                   Use matte=True for soft edges from matting models (e.g., RVM, MatAnyone).
+                   Use matte=False for hard masks from segmentation models (e.g., SAM2).
 
         Returns:
             Foreground instance with probed format information
@@ -104,6 +110,7 @@ class Foreground(VideoSource):
             primary_path=video_path,
             mask_path=mask_path,
             audio_path=audio_path,
+            matte=matte,
         )
         fg._probe_and_store(video_path, ctx)  # Probe the RGB video
         return fg
@@ -188,6 +195,7 @@ class Foreground(VideoSource):
             mask_path=self.mask_path,
             audio_path=self.audio_path,
             source_trim=(start, end),
+            matte=self.matte,  # Preserve matte flag
         )
         # Copy the probed video info
         if hasattr(self, "_video_info"):
@@ -498,16 +506,25 @@ class Foreground(VideoSource):
             # Full alpha processing with mask
             mask_input = f"[{input_map[f'{layer_label}_mask']}:v]"
 
-            # Create the alphamerge filter chain with proper labels and binary mask conversion
+            # Create the alphamerge filter chain with proper labels
             filters.append(f"{rgb_input}format=rgba[{layer_label}_rgba]")
             filters.append(f"{mask_input}format=gray[{layer_label}_mask_gray]")
-            # Convert mask to binary (0 or 255) - same as stacked processing
-            filters.append(
-                f"[{layer_label}_mask_gray]geq='if(gte(lum(X,Y),128),255,0)'[{layer_label}_binary_mask]"
-            )
-            filters.append(
-                f"[{layer_label}_rgba][{layer_label}_binary_mask]alphamerge[{layer_label}_merged]"
-            )
+
+            if self.matte:
+                # Matte mode: use grayscale values directly for soft alpha blending
+                # This preserves smooth edges from matting models (RVM, MatAnyone)
+                filters.append(
+                    f"[{layer_label}_rgba][{layer_label}_mask_gray]alphamerge[{layer_label}_merged]"
+                )
+            else:
+                # Mask mode: convert to binary (0 or 255) to clean up compression artifacts
+                # This is appropriate for segmentation models (SAM2)
+                filters.append(
+                    f"[{layer_label}_mask_gray]geq='if(gte(lum(X,Y),128),255,0)'[{layer_label}_binary_mask]"
+                )
+                filters.append(
+                    f"[{layer_label}_rgba][{layer_label}_binary_mask]alphamerge[{layer_label}_merged]"
+                )
         else:
             # No alpha - just use RGB directly
             filters.append(f"{rgb_input}format=rgb24[{layer_label}_merged]")
@@ -528,19 +545,27 @@ class Foreground(VideoSource):
             # Full alpha processing with mask
             filters.append(f"[{layer_label}_top]format=rgba[{layer_label}_top_rgba]")
 
-            # Extract bottom half (mask), convert to grayscale, and make binary
+            # Extract bottom half (mask), convert to grayscale
             filters.append(f"{stacked_input}crop=iw:ih/2:0:ih/2[{layer_label}_bottom]")
             filters.append(
                 f"[{layer_label}_bottom]format=gray[{layer_label}_mask_gray]"
             )
-            filters.append(
-                f"[{layer_label}_mask_gray]geq='if(gte(lum(X,Y),128),255,0)'[{layer_label}_binary_mask]"
-            )
 
-            # Apply mask as alpha channel using alphamerge
-            filters.append(
-                f"[{layer_label}_top_rgba][{layer_label}_binary_mask]alphamerge[{layer_label}_merged]"
-            )
+            if self.matte:
+                # Matte mode: use grayscale values directly for soft alpha blending
+                # This preserves smooth edges from matting models (RVM, MatAnyone)
+                filters.append(
+                    f"[{layer_label}_top_rgba][{layer_label}_mask_gray]alphamerge[{layer_label}_merged]"
+                )
+            else:
+                # Mask mode: convert to binary (0 or 255) to clean up compression artifacts
+                # This is appropriate for segmentation models (SAM2)
+                filters.append(
+                    f"[{layer_label}_mask_gray]geq='if(gte(lum(X,Y),128),255,0)'[{layer_label}_binary_mask]"
+                )
+                filters.append(
+                    f"[{layer_label}_top_rgba][{layer_label}_binary_mask]alphamerge[{layer_label}_merged]"
+                )
         else:
             # No alpha - just use RGB from top half directly
             filters.append(f"[{layer_label}_top]format=rgb24[{layer_label}_merged]")

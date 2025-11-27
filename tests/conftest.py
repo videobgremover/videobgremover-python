@@ -84,3 +84,22 @@ def get_test_backgrounds():
         "video": os.getenv("TEST_BACKGROUND_VIDEO", "test_assets/background_video.mp4"),
         "image": os.getenv("TEST_BACKGROUND_IMAGE", "test_assets/background_image.png"),
     }
+
+
+def ensure_output_dir(subdir=""):
+    """Create and return a persistent test output directory.
+
+    Args:
+        subdir: Optional subdirectory name (e.g., 'matte_tests')
+
+    Returns:
+        Absolute path to the output directory
+    """
+    base_dir = os.path.join(os.path.dirname(__file__), "..", "test_outputs")
+    if subdir:
+        output_dir = os.path.join(base_dir, subdir)
+    else:
+        output_dir = base_dir
+
+    os.makedirs(output_dir, exist_ok=True)
+    return os.path.abspath(output_dir)

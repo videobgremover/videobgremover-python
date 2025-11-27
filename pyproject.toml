@@ -1,6 +1,6 @@
 [project]
 name = "videobgremover"
-version = "0.1.8"
+version = "0.1.9"
 description = "Official Python SDK for VideoBGRemover API - Remove video backgrounds with AI and compose videos with FFmpeg"
 readme = "README.md"
 authors = [

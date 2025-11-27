@@ -26,6 +26,7 @@ import pytest
 import subprocess
 import json
 import tempfile
+import os
 import requests
 from videobgremover import (
     VideoBGRemoverClient,
@@ -2755,6 +2756,149 @@ class TestVideoBGRemoverWorkflow:
             print(f"     URL 1: {duration1:.2f}s → {output_path1}")
             print(f"     URL 2: {duration2:.2f}s → {output_path2}")
             print(f"     TOTAL: {duration1 + duration2:.2f}s")
+
+
+class TestMatteFeatureFunctional:
+    """Functional tests for the matte feature."""
+
+    def test_compose_with_matte_true(self):
+        """Test composition with matte=True and export."""
+        print("🎨 Testing matte feature with matte=True (soft alpha)...")
+
+        from .conftest import ensure_output_dir
+        from videobgremover import Foreground
+
+        output_dir = ensure_output_dir("matte_tests")
+        output_path = os.path.join(output_dir, "matte_true_composition.mp4")
+
+        # Create composition with matte foreground (soft edges)
+        bg = Background.from_color("#00FF00", 1920, 1080, 30.0)
+        comp = Composition(bg)
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,  # Soft edges
+        )
+        comp.add(fg).at(Anchor.CENTER).size(SizeMode.CONTAIN)
+
+        # Export
+        encoder = EncoderProfile.h264(crf=23, preset="fast")
+        comp.to_file(output_path, encoder)
+
+        # Verify
+        assert os.path.exists(output_path)
+        file_size = os.path.getsize(output_path)
+        assert file_size > 0
+        file_size_mb = file_size / 1024 / 1024
+        print(f"  ✅ Matte=true output: {output_path} ({file_size_mb:.2f} MB)")
+
+    def test_compose_with_matte_false(self):
+        """Test composition with matte=False and export."""
+        print("🎨 Testing matte feature with matte=False (binary mask)...")
+
+        from .conftest import ensure_output_dir
+        from videobgremover import Foreground
+
+        output_dir = ensure_output_dir("matte_tests")
+        output_path = os.path.join(output_dir, "matte_false_composition.mp4")
+
+        # Create composition with binary mask foreground (hard edges)
+        bg = Background.from_color("#0000FF", 1920, 1080, 30.0)
+        comp = Composition(bg)
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=False,  # Hard edges
+        )
+        comp.add(fg).at(Anchor.CENTER).size(SizeMode.CONTAIN)
+
+        # Export
+        encoder = EncoderProfile.h264(crf=23, preset="fast")
+        comp.to_file(output_path, encoder)
+
+        # Verify
+        assert os.path.exists(output_path)
+        file_size = os.path.getsize(output_path)
+        assert file_size > 0
+        file_size_mb = file_size / 1024 / 1024
+        print(f"  ✅ Matte=false output: {output_path} ({file_size_mb:.2f} MB)")
+
+    def test_matte_comparison_side_by_side(self):
+        """Test side-by-side comparison of matte=True vs matte=False."""
+        print("🎨 Testing matte comparison: soft edges (left) vs hard edges (right)...")
+
+        from .conftest import ensure_output_dir
+        from videobgremover import Foreground
+
+        output_dir = ensure_output_dir("matte_tests")
+        output_path = os.path.join(output_dir, "matte_comparison.mp4")
+
+        # Create composition
+        bg = Background.from_color("#808080", 1920, 1080, 30.0)
+        comp = Composition(bg)
+
+        # Left side: matte=True (soft edges)
+        fg_matte = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,
+        )
+        comp.add(fg_matte, "matte_true").at(Anchor.CENTER_LEFT, dx=100).size(
+            SizeMode.CANVAS_PERCENT, percent=40
+        )
+
+        # Right side: matte=False (hard edges)
+        fg_binary = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=False,
+        )
+        comp.add(fg_binary, "matte_false").at(Anchor.CENTER_RIGHT, dx=-100).size(
+            SizeMode.CANVAS_PERCENT, percent=40
+        )
+
+        # Export
+        encoder = EncoderProfile.h264(crf=20, preset="medium")
+        comp.to_file(output_path, encoder)
+
+        # Verify
+        assert os.path.exists(output_path)
+        file_size = os.path.getsize(output_path)
+        assert file_size > 0
+        file_size_mb = file_size / 1024 / 1024
+        print(f"  ✅ Side-by-side comparison: {output_path} ({file_size_mb:.2f} MB)")
+        print("     Left: matte=True (soft alpha), Right: matte=False (binary mask)")
+
+    def test_matte_with_image_background(self):
+        """Test matte foreground with image background."""
+        print("🎨 Testing matte foreground with image background...")
+
+        from .conftest import ensure_output_dir
+        from videobgremover import Foreground
+
+        output_dir = ensure_output_dir("matte_tests")
+        output_path = os.path.join(output_dir, "matte_with_image_bg.mp4")
+
+        # Use image background
+        bg = Background.from_image("test_assets/background_image.png", fps=30.0)
+        comp = Composition(bg)
+        fg = Foreground.from_video_and_mask(
+            "test_assets/matte/video_preprocessed.mp4",
+            "test_assets/matte/video_matte.mp4",
+            matte=True,  # Soft edges work better with complex backgrounds
+        )
+        comp.add(fg).at(Anchor.CENTER).size(SizeMode.CANVAS_PERCENT, percent=60)
+
+        # Export
+        encoder = EncoderProfile.h264(crf=22, preset="fast")
+        comp.to_file(output_path, encoder)
+
+        # Verify
+        assert os.path.exists(output_path)
+        file_size = os.path.getsize(output_path)
+        assert file_size > 0
+        file_size_mb = file_size / 1024 / 1024
+        print(f"  ✅ Matte + image background: {output_path} ({file_size_mb:.2f} MB)")
 
 
 if __name__ == "__main__":
