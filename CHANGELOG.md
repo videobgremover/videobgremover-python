@@ -2,6 +2,11 @@
 
 All notable changes to the VideoBGRemover Python SDK will be documented in this file.
 
+## [0.1.10] - 2026-01-26
+
+### Added
+- **Job deletion support**: Added `delete_job()` method to delete jobs and associated files
+
 ## [0.1.9] - 2025-11-27
 
 ### Added

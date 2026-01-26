@@ -231,3 +231,15 @@ class VideoBGRemoverClient:
         """
         response = self._request("GET", f"/v1/webhooks/deliveries?video_id={video_id}")
         return response
+
+    def delete_job(self, job_id: str) -> Dict[str, Any]:
+        """
+        Delete a job and all associated files.
+
+        Args:
+            job_id: The job ID to delete
+
+        Returns:
+            Deletion confirmation with job ID and message
+        """
+        return self._request("DELETE", f"/v1/jobs/{job_id}")

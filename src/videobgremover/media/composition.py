@@ -1037,7 +1037,7 @@ class Composition:
 
         # Use custom expressions if provided
         if layer["x_expr"] and layer["y_expr"]:
-            return f"x='{layer['x_expr']}':y='{layer['y_expr']}'"
+            return f"x={layer['x_expr']}:y={layer['y_expr']}"
 
         # Check if this is CANVAS_PERCENT mode - if so, use target box dimensions for positioning
         size_mode = layer["size"][0]
@@ -1177,7 +1177,7 @@ class Composition:
                 x_expr = f"(W-w)/2{dx:+d}" if dx != 0 else "(W-w)/2"
                 y_expr = f"(H-h)/2{dy:+d}" if dy != 0 else "(H-h)/2"
 
-        return f"x='{x_expr}':y='{y_expr}'"
+        return f"x={x_expr}:y={y_expr}"
 
     def _run(
         self, argv: List[str], on_progress: ProgressCb = None, verbose: bool = False

@@ -138,10 +138,24 @@ class VideoBackground(BaseBackground, VideoSource):
     )
 
     def get_duration(self) -> Optional[float]:
-        """Get video duration from probed info."""
+        """Get video duration from probed info, accounting for source trimming."""
         if self._video_info:
             duration = self._video_info.get("duration")
-            return float(duration) if duration else None
+            if duration:
+                original_duration = float(duration)
+
+                # If video is trimmed, calculate effective duration
+                if self.source_trim:
+                    start, end = self.source_trim
+                    if end is not None:
+                        # Trimmed duration: end - start
+                        return end - start
+                    else:
+                        # Trimmed from start to end of video
+                        return original_duration - start
+
+                # No trimming - return original duration
+                return original_duration
         return None
 
     def controls_duration(self) -> bool:
