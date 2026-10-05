@@ -8,6 +8,7 @@ from .models import (
     CreateJobFileUpload,
     CreateJobUrlDownload,
     StartJobRequest,
+    StickerExportRequest,
     JobStatus,
     CreditBalance,
     ApiError,
@@ -145,6 +146,14 @@ class VideoBGRemoverClient:
         """
         data = req.model_dump() if req else {}
         return self._request("POST", f"/v1/jobs/{job_id}/start", json=data)
+
+    def create_sticker_export(self, job_id: str, req: StickerExportRequest) -> Dict[str, Any]:
+        """Export a validated chat sticker from an existing original and mask."""
+        return self._request("POST", f"/v1/jobs/{job_id}/exports", json=req.model_dump(mode="json", exclude_none=True))
+
+    def export_status(self, export_id: str) -> Dict[str, Any]:
+        """Poll for a validated output URL or a terminal failure."""
+        return self._request("GET", f"/v1/exports/{export_id}")
 
     def status(self, job_id: str) -> JobStatus:
         """

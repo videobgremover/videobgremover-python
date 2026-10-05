@@ -8,6 +8,7 @@ from videobgremover.client import (
     CreateJobFileUpload,
     CreateJobUrlDownload,
     StartJobRequest,
+    StickerExportRequest,
     BackgroundOptions,
     JobStatus,
     ApiError,
@@ -18,6 +19,29 @@ from videobgremover.core import BackgroundType, TransparentFormat
 
 
 class TestVideoBGRemoverClient:
+    @pytest.mark.parametrize("format", ["sticker-telegram-v1", "sticker-whatsapp-v1", "sticker-wechat-v1", "sticker-discord-v1"])
+    @responses.activate
+    def test_sticker_export_format_defaults_to_cpu(self, format):
+        import json
+        client = VideoBGRemoverClient("test_key")
+        responses.add(responses.POST, "https://api.videobgremover.com/v1/jobs/job-1/exports",
+                      json={"export_id": "export-1", "format": format, "status": "queued"}, status=200)
+        assert client.create_sticker_export("job-1", StickerExportRequest(format=format))["format"] == format
+        assert json.loads(responses.calls[0].request.body) == {"format": format, "use_gpu": False}
+
+    @responses.activate
+    def test_sticker_export_profile_only_defaults_to_cpu(self):
+        client = VideoBGRemoverClient("test_key")
+        responses.add(responses.POST, "https://api.videobgremover.com/v1/jobs/job-1/exports",
+                      json={"export_id": "export-1", "sticker_profile": "telegram-v1", "status": "queued"}, status=200)
+        result = client.create_sticker_export("job-1", StickerExportRequest(sticker_profile="telegram-v1"))
+        assert result["export_id"] == "export-1"
+        import json
+        assert json.loads(responses.calls[0].request.body) == {"sticker_profile": "telegram-v1", "use_gpu": False}
+        responses.add(responses.GET, "https://api.videobgremover.com/v1/exports/export-1",
+                      json={"status": "completed", "output_url": "https://example.test/sticker.webm"}, status=200)
+        assert client.export_status("export-1")["status"] == "completed"
+
     """Test the API client."""
 
     def test_init(self):

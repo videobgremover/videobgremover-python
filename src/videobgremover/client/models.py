@@ -1,6 +1,6 @@
 """Pydantic models for VideoBGRemover API client."""
 
-from pydantic import BaseModel, HttpUrl, constr, field_validator
+from pydantic import BaseModel, HttpUrl, constr, field_validator, model_validator
 from typing import Optional, Literal, TypeAlias, Annotated
 from ..core.types import BackgroundType, TransparentFormat
 
@@ -21,6 +21,32 @@ class CreateJobUrlDownload(BaseModel):
     """Request model for creating a job with URL download."""
 
     video_url: HttpUrl
+
+
+StickerProfile = Literal["telegram-v1", "whatsapp-v1", "wechat-v1", "discord-v1"]
+
+
+StickerExportFormat = Literal[
+    'sticker-telegram-v1', 'sticker-whatsapp-v1', 'sticker-wechat-v1', 'sticker-discord-v1'
+]
+
+
+class StickerExportRequest(BaseModel):
+    """A profile owns format, dimensions, duration and the compression budget."""
+
+    format: Optional[StickerExportFormat] = None
+    sticker_profile: Optional[StickerProfile] = None  # Legacy input
+    use_gpu: bool = False
+    mask_version: Optional[int] = None
+    webhook_url: Optional[HttpUrl] = None
+
+    @model_validator(mode='after')
+    def validate_format(self):
+        if not self.format and not self.sticker_profile:
+            raise ValueError('Choose a sticker export format')
+        if self.format and self.sticker_profile and self.format != 'sticker-' + self.sticker_profile:
+            raise ValueError('sticker_profile does not match format')
+        return self
 
 
 class BackgroundOptions(BaseModel):

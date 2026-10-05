@@ -317,3 +317,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 📧 [Email Support](mailto:paul@videobgremover.com)
 - 🐛 [Issue Tracker](https://github.com/videobgremover/videobgremover-python/issues)
+
+
+### Animated sticker exports
+
+Reuse a completed background-removal job with a versioned sticker format:
+
+```python
+from videobgremover.client import StickerExportRequest
+
+receipt = client.create_sticker_export(
+    job_id, StickerExportRequest(format="sticker-telegram-v1")
+)
+result = client.export_status(receipt["export_id"])
+```
+
+Also supported: `sticker-whatsapp-v1`, `sticker-wechat-v1`, `sticker-discord-v1`.
+Sticker formats own their dimensions, duration and compression budget with 10% size headroom.
+The helper defaults to CPU; set `use_gpu=True` explicitly for GPU routing.
+Poll until completed before using `output_url`. Completed results include a validation receipt and `poster_url`.

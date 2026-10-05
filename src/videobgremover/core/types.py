@@ -20,6 +20,10 @@ class BackgroundType(str, Enum):
 class TransparentFormat(str, Enum):
     """Transparent video format options."""
 
+    STICKER_TELEGRAM_V1 = 'sticker-telegram-v1'
+    STICKER_WHATSAPP_V1 = 'sticker-whatsapp-v1'
+    STICKER_WECHAT_V1 = 'sticker-wechat-v1'
+    STICKER_DISCORD_V1 = 'sticker-discord-v1'
     WEBM_VP9 = "webm_vp9"
     MOV_PRORES = "mov_prores"
     PNG_SEQUENCE = "png_sequence"
